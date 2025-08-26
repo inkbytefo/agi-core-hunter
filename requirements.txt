@@ -1,8 +1,8 @@
-# Core ML Libraries
-jax>=0.4.20
-flax>=0.7.5
-optax>=0.1.7
-chex>=0.1.8
+# Core ML Libraries - Updated for CUDA 12 support
+jax[cuda12]>=0.4.25
+flax>=0.8.0
+optax>=0.1.9
+chex>=0.1.10
 
 # Environment & Simulation
 gymnax>=0.0.6

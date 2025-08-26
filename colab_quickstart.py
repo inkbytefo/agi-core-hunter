@@ -31,10 +31,10 @@ def setup_colab_environment():
     # 2. Bağımlılıkları yükle
     print("\n📦 Bağımlılıklar yükleniyor...")
     packages = [
-        "jax[cuda]>=0.4.20",
-        "flax>=0.7.5", 
-        "optax>=0.1.7",
-        "chex>=0.1.8",
+        "jax[cuda12]>=0.4.25",  # Updated for CUDA 12 support
+        "flax>=0.8.0", 
+        "optax>=0.1.9",
+        "chex>=0.1.10",
         "wandb>=0.16.0",
         "tqdm>=4.66.0",
         "matplotlib>=3.7.0",

@@ -19,6 +19,63 @@ import numpy as np
 from tqdm import tqdm
 import wandb
 
+# GPU/CUDA initialization and verification
+def setup_jax_devices():
+    """Initialize and verify JAX devices for optimal performance"""
+    devices = jax.devices()
+    print(f"🔧 JAX Devices Available: {devices}")
+    
+    # Check for GPU availability
+    gpu_devices = [d for d in devices if d.device_kind == 'gpu']
+    if gpu_devices:
+        print(f"✅ GPU devices found: {len(gpu_devices)} GPU(s)")
+        print(f"   Primary GPU: {gpu_devices[0]}")
+        
+        # Set memory preallocation for better performance
+        import os
+        os.environ.setdefault('XLA_PYTHON_CLIENT_PREALLOCATE', 'false')
+        os.environ.setdefault('XLA_PYTHON_CLIENT_MEM_FRACTION', '0.8')
+        
+    else:
+        print("⚠️  No GPU devices found, using CPU. Performance will be slower.")
+        print("   For GPU support, install with: pip install -U 'jax[cuda12]'")
+    
+    return devices
+
+# Initialize JAX devices at module load
+_jax_devices = setup_jax_devices()
+import os
+
+# Configure JAX for optimal GPU usage
+try:
+    # Enable memory preallocation for better performance
+    os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
+    os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.8'
+    
+    # Check available devices
+    devices = jax.devices()
+    print(f"🖥️ Available JAX devices: {devices}")
+    
+    # Check for GPU support
+    gpu_devices = [d for d in devices if d.device_kind == 'gpu']
+    if gpu_devices:
+        print(f"✅ GPU acceleration available: {len(gpu_devices)} GPU(s) detected")
+        print(f"   GPU info: {gpu_devices[0]}")
+        
+        # Set default device for computations
+        jax.config.update('jax_default_device', gpu_devices[0])
+        
+        # Enable XLA optimizations for GPU
+        jax.config.update('jax_enable_x64', False)  # Use float32 for better GPU performance
+        
+    else:
+        print("⚠️ No GPU detected, using CPU. For better performance, ensure CUDA is properly installed.")
+        print("   Install with: pip install -U 'jax[cuda12]'")
+        
+except Exception as e:
+    print(f"⚠️ JAX device setup warning: {e}")
+    print("🔄 Falling back to default JAX configuration...")
+
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
 
@@ -83,6 +140,34 @@ class ExperimentRunner:
             tags=log_config["wandb_tags"],
             config=self.config
         )
+        
+        # Log device information
+        devices = jax.devices()
+        gpu_devices = [d for d in devices if d.device_kind == 'gpu']
+        
+        wandb.log({
+            "device_info/total_devices": len(devices),
+            "device_info/gpu_devices": len(gpu_devices),
+            "device_info/device_list": str(devices)
+        })
+    
+    def log_gpu_memory(self, step: int):
+        """Log GPU memory usage if available"""
+        try:
+            gpu_devices = [d for d in jax.devices() if d.device_kind == 'gpu']
+            if gpu_devices:
+                # Get memory info for the first GPU
+                device = gpu_devices[0]
+                memory_info = device.memory_stats()
+                
+                wandb.log({
+                    f"gpu_memory/bytes_in_use": memory_info.get('bytes_in_use', 0),
+                    f"gpu_memory/peak_bytes_in_use": memory_info.get('peak_bytes_in_use', 0),
+                    "step": step
+                })
+        except Exception as e:
+            # Silently continue if memory monitoring fails
+            pass
     
     def collect_episode(self, agent: BaseAgent, max_steps: int = None) -> Dict[str, Any]:
         """Collect one episode of experience"""
@@ -167,6 +252,10 @@ class ExperimentRunner:
             # Log to wandb
             if episode % self.config["logging"]["log_frequency"] == 0:
                 wandb.log({f"{agent.name}/{k}": v for k, v in metrics.items()})
+                
+                # Log GPU memory usage every 10 episodes
+                if episode % (self.config["logging"]["log_frequency"] * 10) == 0:
+                    self.log_gpu_memory(episode)
         
         return training_metrics
     
@@ -359,6 +448,29 @@ def main():
     )
     
     args = parser.parse_args()
+    
+    # Print system information
+    print("\n🚀 AGI Core Hunter - MDL vs OOD Experiment")
+    print("=" * 50)
+    
+    # JAX device information
+    devices = jax.devices()
+    gpu_devices = [d for d in devices if d.device_kind == 'gpu']
+    cpu_devices = [d for d in devices if d.device_kind == 'cpu']
+    
+    print(f"🖥️  Total devices: {len(devices)}")
+    print(f"⚡ GPU devices: {len(gpu_devices)}")
+    print(f"🧠 CPU devices: {len(cpu_devices)}")
+    
+    if gpu_devices:
+        for i, device in enumerate(gpu_devices):
+            print(f"   GPU {i}: {device}")
+        print("✅ GPU acceleration enabled")
+    else:
+        print("⚠️  No GPU detected - using CPU only")
+        print("   For GPU support, install: pip install -U 'jax[cuda12]'")
+    
+    print("=" * 50)
     
     # Run experiment
     runner = ExperimentRunner(args.manifest)

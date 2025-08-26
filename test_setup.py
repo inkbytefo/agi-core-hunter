@@ -7,9 +7,64 @@ import sys
 from pathlib import Path
 import jax
 import jax.numpy as jnp
+import os
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
+
+def test_jax_setup():
+    """Test JAX installation and CUDA setup"""
+    print("🚀 Testing JAX setup...")
+    
+    try:
+        # Check JAX version
+        print(f"   JAX version: {jax.__version__}")
+        
+        # Check available devices
+        devices = jax.devices()
+        print(f"   Available devices: {len(devices)}")
+        
+        gpu_devices = [d for d in devices if d.device_kind == 'gpu']
+        cpu_devices = [d for d in devices if d.device_kind == 'cpu']
+        
+        print(f"   GPU devices: {len(gpu_devices)}")
+        print(f"   CPU devices: {len(cpu_devices)}")
+        
+        if gpu_devices:
+            print(f"✅ GPU acceleration available!")
+            for i, device in enumerate(gpu_devices):
+                print(f"      GPU {i}: {device}")
+            
+            # Test simple GPU computation
+            print("   Testing GPU computation...")
+            key = jax.random.PRNGKey(42)
+            x = jax.random.normal(key, (1000, 1000))
+            
+            # Force computation on GPU
+            with jax.default_device(gpu_devices[0]):
+                y = jnp.dot(x, x.T)
+                result = jnp.sum(y)
+                print(f"   GPU computation result: {result:.2f}")
+            
+            print("✅ GPU computation successful!")
+            
+        else:
+            print("⚠️  No GPU detected")
+            print("   Install CUDA support with: pip install -U 'jax[cuda12]'")
+            print("   Falling back to CPU...")
+            
+            # Test CPU computation
+            key = jax.random.PRNGKey(42)
+            x = jax.random.normal(key, (100, 100))
+            y = jnp.dot(x, x.T)
+            result = jnp.sum(y)
+            print(f"   CPU computation result: {result:.2f}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ JAX setup test failed: {e}")
+        return False
 
 def test_imports():
     """Test that all modules can be imported"""
@@ -145,6 +200,7 @@ def main():
     print("=" * 40)
     
     tests = [
+        test_jax_setup,
         test_imports,
         test_environment,
         test_agent,

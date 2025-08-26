@@ -19,9 +19,9 @@ def setup_kaggle():
     except:
         print("❌ GPU bulunamadı")
     
-    # 2. Bağımlılıkları yükle
+    # 2. Bağımlılıkları yükle (Modern CUDA 12 desteği ile)
     packages = [
-        "jax[cuda]",
+        "jax[cuda12]",  # Updated for CUDA 12 support
         "flax", 
         "optax",
         "chex",
