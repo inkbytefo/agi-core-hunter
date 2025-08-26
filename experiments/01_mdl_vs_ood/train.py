@@ -9,6 +9,7 @@ MDL regularization improves out-of-distribution generalization.
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Dict, Any, List
 import argparse
@@ -19,7 +20,22 @@ import numpy as np
 from tqdm import tqdm
 import wandb
 
-# GPU/CUDA initialization and verification
+import os
+
+# Configure JAX for optimal GPU usage (single setup)
+try:
+    # Set memory management for better GPU performance in Colab
+    os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
+    os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.8'
+    
+    # Enable XLA optimizations for GPU
+    jax.config.update('jax_enable_x64', False)  # Use float32 for better GPU performance
+    
+except Exception as e:
+    print(f"⚠️ JAX config warning: {e}")
+    print("🔄 Falling back to default JAX configuration...")
+
+
 def setup_jax_devices():
     """Initialize and verify JAX devices for optimal performance"""
     devices = jax.devices()
@@ -31,50 +47,22 @@ def setup_jax_devices():
         print(f"✅ GPU devices found: {len(gpu_devices)} GPU(s)")
         print(f"   Primary GPU: {gpu_devices[0]}")
         
-        # Set memory preallocation for better performance
-        import os
-        os.environ.setdefault('XLA_PYTHON_CLIENT_PREALLOCATE', 'false')
-        os.environ.setdefault('XLA_PYTHON_CLIENT_MEM_FRACTION', '0.8')
+        # Set default device for computations
+        jax.config.update('jax_default_device', gpu_devices[0])
+        
+        # Test GPU with simple computation
+        test_array = jnp.ones((1000, 1000))
+        _ = jnp.dot(test_array, test_array.T)
+        print("   ✅ GPU computation test passed")
         
     else:
         print("⚠️  No GPU devices found, using CPU. Performance will be slower.")
         print("   For GPU support, install with: pip install -U 'jax[cuda12]'")
     
-    return devices
+    return devices, gpu_devices
 
 # Initialize JAX devices at module load
-_jax_devices = setup_jax_devices()
-import os
-
-# Configure JAX for optimal GPU usage
-try:
-    # Enable memory preallocation for better performance
-    os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
-    os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.8'
-    
-    # Check available devices
-    devices = jax.devices()
-    print(f"🖥️ Available JAX devices: {devices}")
-    
-    # Check for GPU support
-    gpu_devices = [d for d in devices if d.device_kind == 'gpu']
-    if gpu_devices:
-        print(f"✅ GPU acceleration available: {len(gpu_devices)} GPU(s) detected")
-        print(f"   GPU info: {gpu_devices[0]}")
-        
-        # Set default device for computations
-        jax.config.update('jax_default_device', gpu_devices[0])
-        
-        # Enable XLA optimizations for GPU
-        jax.config.update('jax_enable_x64', False)  # Use float32 for better GPU performance
-        
-    else:
-        print("⚠️ No GPU detected, using CPU. For better performance, ensure CUDA is properly installed.")
-        print("   Install with: pip install -U 'jax[cuda12]'")
-        
-except Exception as e:
-    print(f"⚠️ JAX device setup warning: {e}")
-    print("🔄 Falling back to default JAX configuration...")
+_jax_devices, _gpu_devices = setup_jax_devices()
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
@@ -134,12 +122,28 @@ class ExperimentRunner:
         """Initialize experiment logging"""
         log_config = self.config["logging"]
         
-        wandb.init(
-            project=log_config["wandb_project"],
-            name=f"{self.config['experiment']['name']}_{self.config['experiment']['version']}",
-            tags=log_config["wandb_tags"],
-            config=self.config
-        )
+        # Check if WandB is available and logged in
+        try:
+            wandb.init(
+                project=log_config["wandb_project"],
+                name=f"{self.config['experiment']['name']}_{self.config['experiment']['version']}",
+                tags=log_config["wandb_tags"],
+                config=self.config
+            )
+            print("✅ WandB logging initialized successfully")
+        except Exception as e:
+            print(f"⚠️ WandB setup warning: {e}")
+            print("   Run 'wandb login' in terminal if you want experiment tracking")
+            print("   Continuing without WandB logging...")
+            # Initialize offline mode
+            os.environ["WANDB_MODE"] = "offline"
+            wandb.init(
+                project=log_config["wandb_project"],
+                name=f"{self.config['experiment']['name']}_{self.config['experiment']['version']}",
+                tags=log_config["wandb_tags"],
+                config=self.config,
+                mode="offline"
+            )
         
         # Log device information
         devices = jax.devices()
@@ -148,7 +152,8 @@ class ExperimentRunner:
         wandb.log({
             "device_info/total_devices": len(devices),
             "device_info/gpu_devices": len(gpu_devices),
-            "device_info/device_list": str(devices)
+            "device_info/device_list": str(devices),
+            "device_info/jax_backend": jax.lib.xla_bridge.get_backend().platform
         })
     
     def log_gpu_memory(self, step: int):
@@ -156,15 +161,42 @@ class ExperimentRunner:
         try:
             gpu_devices = [d for d in jax.devices() if d.device_kind == 'gpu']
             if gpu_devices:
-                # Get memory info for the first GPU
                 device = gpu_devices[0]
-                memory_info = device.memory_stats()
                 
-                wandb.log({
-                    f"gpu_memory/bytes_in_use": memory_info.get('bytes_in_use', 0),
-                    f"gpu_memory/peak_bytes_in_use": memory_info.get('peak_bytes_in_use', 0),
-                    "step": step
-                })
+                # Try to get memory info (available in newer JAX versions)
+                try:
+                    memory_info = device.memory_stats()
+                    wandb.log({
+                        f"gpu_memory/bytes_in_use": memory_info.get('bytes_in_use', 0),
+                        f"gpu_memory/peak_bytes_in_use": memory_info.get('peak_bytes_in_use', 0),
+                        "step": step
+                    })
+                except (AttributeError, Exception):
+                    # Fallback: log basic GPU info
+                    wandb.log({
+                        f"gpu_memory/device_kind": device.device_kind,
+                        f"gpu_memory/device_id": device.id,
+                        "step": step
+                    })
+                    
+                    # Try nvidia-smi for more detailed info (in Colab)
+                    try:
+                        import subprocess
+                        result = subprocess.run(['nvidia-smi', '--query-gpu=memory.used,memory.total', '--format=csv,nounits,noheader'], 
+                                              capture_output=True, text=True, timeout=5)
+                        if result.returncode == 0:
+                            lines = result.stdout.strip().split('\n')
+                            if lines and lines[0]:
+                                used_mb, total_mb = lines[0].split(', ')
+                                wandb.log({
+                                    f"gpu_memory/used_mb": int(used_mb),
+                                    f"gpu_memory/total_mb": int(total_mb),
+                                    f"gpu_memory/utilization_percent": (int(used_mb) / int(total_mb)) * 100,
+                                    "step": step
+                                })
+                    except (subprocess.TimeoutExpired, FileNotFoundError, Exception):
+                        pass  # nvidia-smi not available or failed
+                        
         except Exception as e:
             # Silently continue if memory monitoring fails
             pass
@@ -270,6 +302,23 @@ class ExperimentRunner:
         
         return returns
     
+    def _make_json_serializable(self, obj):
+        """Convert numpy and JAX arrays to JSON serializable format"""
+        if isinstance(obj, dict):
+            return {k: self._make_json_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._make_json_serializable(v) for v in obj]
+        elif isinstance(obj, (jnp.ndarray, np.ndarray)):
+            return obj.tolist()
+        elif isinstance(obj, (np.float32, np.float64, jnp.float32, jnp.float64)):
+            return float(obj)
+        elif isinstance(obj, (np.int32, np.int64, jnp.int32, jnp.int64)):
+            return int(obj)
+        elif isinstance(obj, (np.bool_, jnp.bool_)):
+            return bool(obj)
+        else:
+            return obj
+    
     def evaluate_ood(self, agent: BaseAgent) -> Dict[str, float]:
         """Evaluate agent on out-of-distribution scenarios"""
         ood_results = {}
@@ -370,10 +419,41 @@ class ExperimentRunner:
             }
             wandb.log(final_metrics)
         
-        # Save results
-        results_path = Path(__file__).parent / "results.json"
-        with open(results_path, 'w') as f:
-            json.dump(all_results, f, indent=2, default=float)
+        # Save results with checkpoint system
+        results_dir = Path(__file__).parent / "results"
+        results_dir.mkdir(exist_ok=True)
+        
+        # Save main results
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        results_path = results_dir / f"results_{timestamp}.json"
+        
+        # Also save as latest for easy access
+        latest_path = Path(__file__).parent / "results.json"
+        
+        # Convert numpy types for JSON serialization
+        serializable_results = self._make_json_serializable(all_results)
+        
+        try:
+            with open(results_path, 'w') as f:
+                json.dump(serializable_results, f, indent=2)
+            
+            with open(latest_path, 'w') as f:
+                json.dump(serializable_results, f, indent=2)
+                
+            print(f"\nResults saved to:")
+            print(f"  📁 {results_path}")
+            print(f"  📁 {latest_path}")
+            
+        except Exception as e:
+            print(f"⚠️ Warning: Could not save results to {results_path}: {e}")
+            # Fallback: try to save to current directory
+            fallback_path = Path(__file__).parent / "results_fallback.json"
+            try:
+                with open(fallback_path, 'w') as f:
+                    json.dump(serializable_results, f, indent=2)
+                print(f"  📁 Fallback save: {fallback_path}")
+            except Exception as e2:
+                print(f"❌ Could not save results anywhere: {e2}")
         
         print(f"\nExperiment completed! Results saved to {results_path}")
         
@@ -446,8 +526,30 @@ def main():
         default="manifest.json",
         help="Path to experiment manifest file"
     )
+    parser.add_argument(
+        "--episodes", 
+        type=int,
+        default=None,
+        help="Override total episodes from manifest (useful for quick tests)"
+    )
+    parser.add_argument(
+        "--checkpoint-freq", 
+        type=int,
+        default=None,
+        help="Override checkpoint frequency from manifest"
+    )
+    parser.add_argument(
+        "--gpu-test",
+        action="store_true",
+        help="Run quick GPU utilization test (2 episodes)"
+    )
     
     args = parser.parse_args()
+    
+    # Quick GPU test mode
+    if args.gpu_test:
+        print("\n🏃 Quick GPU Test Mode (2 episodes)")
+        args.episodes = 2
     
     # Print system information
     print("\n🚀 AGI Core Hunter - MDL vs OOD Experiment")
@@ -466,6 +568,13 @@ def main():
         for i, device in enumerate(gpu_devices):
             print(f"   GPU {i}: {device}")
         print("✅ GPU acceleration enabled")
+        
+        # Test GPU computation
+        print("\n🧪 Testing GPU computation...")
+        test_start = jax.device_get(jax.device_put(jnp.array([1.0])))
+        test_computation = jnp.dot(jnp.ones(1000), jnp.ones(1000))
+        print(f"   ✅ GPU test result: {test_computation}")
+        
     else:
         print("⚠️  No GPU detected - using CPU only")
         print("   For GPU support, install: pip install -U 'jax[cuda12]'")
@@ -474,7 +583,25 @@ def main():
     
     # Run experiment
     runner = ExperimentRunner(args.manifest)
+    
+    # Override episodes if specified
+    if args.episodes is not None:
+        print(f"\n⚙️ Overriding episodes: {runner.config['training']['total_episodes']} -> {args.episodes}")
+        runner.config['training']['total_episodes'] = args.episodes
+    
+    # Override checkpoint frequency if specified
+    if args.checkpoint_freq is not None:
+        print(f"\n⚙️ Overriding checkpoint frequency: {runner.config['logging']['log_frequency']} -> {args.checkpoint_freq}")
+        runner.config['logging']['log_frequency'] = args.checkpoint_freq
+    
     results = runner.run_experiment()
+    
+    # GPU test mode summary
+    if args.gpu_test:
+        print("\n🏁 GPU Test Complete!")
+        print("   If you saw GPU utilization above 50% during training,")
+        print("   your setup is working correctly. Run full experiment with:")
+        print("   python train.py --manifest manifest.json")
     
     return results
 

@@ -1,0 +1,65 @@
+{
+  "experiment": {
+    "name": "MDL vs OOD - GPU Test",
+    "version": "mini",
+    "date": "2025-08-27",
+    "description": "Quick GPU test for MDL vs OOD experiment - minimal parameters for performance validation",
+    "hypothesis": "GPU utilization test with minimal compute load"
+  },
+  "environment": {
+    "type": "GridWorld",
+    "config": {
+      "height": 4,
+      "width": 4,
+      "obstacle_prob": 0.1,
+      "max_steps": 20,
+      "reward_goal": 10.0,
+      "reward_step": -0.1,
+      "reward_obstacle": -1.0
+    }
+  },
+  "agents": [
+    {
+      "name": "MDL_Test_Low",
+      "type": "MDLAgent",
+      "config": {
+        "latent_dim": 4,
+        "beta": 0.1,
+        "learning_rate": 3e-4
+      }
+    },
+    {
+      "name": "MDL_Test_High",
+      "type": "MDLAgent", 
+      "config": {
+        "latent_dim": 4,
+        "beta": 2.0,
+        "learning_rate": 3e-4
+      }
+    }
+  ],
+  "training": {
+    "total_episodes": 2,
+    "eval_frequency": 1,
+    "batch_size": 8,
+    "buffer_size": 100
+  },
+  "evaluation": {
+    "ood_tests": [
+      {
+        "name": "test_obstacles",
+        "type": "obstacles",
+        "episodes": 2
+      }
+    ],
+    "metrics": [
+      "success_rate",
+      "average_steps"
+    ]
+  },
+  "logging": {
+    "wandb_project": "agi_core_hunter_test",
+    "wandb_tags": ["gpu_test", "mini", "validation"],
+    "log_frequency": 1
+  }
+}
