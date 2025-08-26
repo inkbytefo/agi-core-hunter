@@ -1,5 +1,0 @@
-Starting experiment: MDL vs OOD Generalization
-Training 3 agents for 5000 episodes each
-
---- Training MDL_Low ---
-Training MDLAgent:  55%|███████████████████████████████████████████████████████████▊                                                 | 2741/5000 [1:33:09<1:26:05,  2.29s/it]

@@ -1,7 +1,7 @@
 # AGI Çekirdek Avcısı: Teknik Mimari ve Uygulama Planı
 
 **Sürüm:** 1.0
-**Tarih:** 24.10.2023
+**Tarih:** 26.08.2025
 
 ---
 

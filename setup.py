@@ -9,12 +9,12 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="agi-core-hunter",
     version="0.1.0",
-    author="AGI Research Team",
-    author_email="research@example.com",
+    author="Inkbytefo",
+    author_email="inkbytefo@gmail.com",
     description="Systematic search for fundamental principles of Artificial General Intelligence",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/username/agi_core_hunter",
+    url="https://github.com/inkbytefo/agi-core-hunter",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[

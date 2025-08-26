@@ -10,8 +10,8 @@ Bu proje, "daha büyük model = daha iyi zekâ" paradigmasının ötesine geçer
 
 ```bash
 # Projeyi klonla
-git clone https://github.com/[username]/agi_core_hunter.git
-cd agi_core_hunter
+git clone https://github.com/inkbytefo/agi-core-hunter.git
+cd agi-core-hunter
 
 # Bağımlılıkları yükle
 pip install -r requirements.txt

@@ -1,8 +1,8 @@
 # Proje: AGI Çekirdek Avcısı (AGI Core Hunter)
 
 **Sürüm:** 1.0
-**Tarih:** 24.10.2023
-**Sorumlular:** [İsimleriniz]
+**Tarih:** 26.08.2025
+**Sorumlular:** Inkbytefo
 
 ---
 
