@@ -1,0 +1,87 @@
+{
+  "experiment": {
+    "name": "MDL vs OOD Generalization",
+    "version": "1.0",
+    "date": "2025-08-26",
+    "description": "Test whether MDL regularization improves out-of-distribution generalization in grid world navigation",
+    "hypothesis": "Agents with stronger compression pressure (higher β in β-VAE) will show better OOD generalization performance"
+  },
+  "environment": {
+    "type": "GridWorld",
+    "config": {
+      "height": 8,
+      "width": 8,
+      "obstacle_prob": 0.2,
+      "max_steps": 50,
+      "reward_goal": 10.0,
+      "reward_step": -0.1,
+      "reward_obstacle": -1.0
+    }
+  },
+  "agents": [
+    {
+      "name": "MDL_Low",
+      "type": "MDLAgent",
+      "config": {
+        "latent_dim": 8,
+        "beta": 0.1,
+        "learning_rate": 3e-4
+      }
+    },
+    {
+      "name": "MDL_Medium", 
+      "type": "MDLAgent",
+      "config": {
+        "latent_dim": 8,
+        "beta": 1.0,
+        "learning_rate": 3e-4
+      }
+    },
+    {
+      "name": "MDL_High",
+      "type": "MDLAgent", 
+      "config": {
+        "latent_dim": 8,
+        "beta": 5.0,
+        "learning_rate": 3e-4
+      }
+    }
+  ],
+  "training": {
+    "total_episodes": 5000,
+    "eval_frequency": 500,
+    "batch_size": 32,
+    "buffer_size": 10000
+  },
+  "evaluation": {
+    "ood_tests": [
+      {
+        "name": "high_obstacles",
+        "type": "obstacles",
+        "episodes": 100
+      },
+      {
+        "name": "larger_grid",
+        "type": "size", 
+        "episodes": 100
+      },
+      {
+        "name": "different_rewards",
+        "type": "rewards",
+        "episodes": 100
+      }
+    ],
+    "metrics": [
+      "success_rate",
+      "average_steps",
+      "ood_performance_ratio",
+      "compression_ratio",
+      "sample_efficiency"
+    ]
+  },
+  "logging": {
+    "wandb_project": "agi_core_hunter",
+    "wandb_tags": ["mdl", "ood", "grid_world", "compression"],
+    "log_frequency": 100
+  }
+}

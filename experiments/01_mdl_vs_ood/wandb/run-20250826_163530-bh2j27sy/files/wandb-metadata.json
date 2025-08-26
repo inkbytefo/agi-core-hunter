@@ -1,0 +1,24 @@
+{
+  "os":  "Windows-10-10.0.26100-SP0",
+  "python":  "CPython 3.11.0",
+  "startedAt":  "2025-08-26T13:35:30.679235Z",
+  "program":  "C:\\Users\\tpoyr\\OneDrive\\Desktop\\AGIMAKER\\experiments\\01_mdl_vs_ood\\train.py",
+  "codePath":  "train.py",
+  "codePathLocal":  "train.py",
+  "email":  "inkbytefo@gmail.com",
+  "root":  "C:\\Users\\tpoyr\\OneDrive\\Desktop\\AGIMAKER\\experiments\\01_mdl_vs_ood",
+  "host":  "Inkbytefo",
+  "executable":  "C:\\Users\\tpoyr\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+  "cpu_count":  4,
+  "cpu_count_logical":  8,
+  "disk":  {
+    "/":  {
+      "total":  "499150483456",
+      "used":  "384825966592"
+    }
+  },
+  "memory":  {
+    "total":  "25691713536"
+  },
+  "writerId":  "5jdjo0l0l2fjjb8u1n8xkysopamqpurd"
+}
