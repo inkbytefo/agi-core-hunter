@@ -42,7 +42,7 @@ def setup_jax_devices():
     print(f"🔧 JAX Devices Available: {devices}")
     
     # Check for GPU availability
-    gpu_devices = [d for d in devices if d.device_kind == 'gpu']
+    gpu_devices = [d for d in devices if d.platform == 'cuda']
     if gpu_devices:
         print(f"✅ GPU devices found: {len(gpu_devices)} GPU(s)")
         print(f"   Primary GPU: {gpu_devices[0]}")
@@ -147,7 +147,7 @@ class ExperimentRunner:
         
         # Log device information
         devices = jax.devices()
-        gpu_devices = [d for d in devices if d.device_kind == 'gpu']
+        gpu_devices = [d for d in devices if d.platform == 'cuda']
         
         wandb.log({
             "device_info/total_devices": len(devices),
@@ -159,7 +159,7 @@ class ExperimentRunner:
     def log_gpu_memory(self, step: int):
         """Log GPU memory usage if available"""
         try:
-            gpu_devices = [d for d in jax.devices() if d.device_kind == 'gpu']
+            gpu_devices = [d for d in jax.devices() if d.platform == 'cuda']
             if gpu_devices:
                 device = gpu_devices[0]
                 
@@ -557,7 +557,7 @@ def main():
     
     # JAX device information
     devices = jax.devices()
-    gpu_devices = [d for d in devices if d.device_kind == 'gpu']
+    gpu_devices = [d for d in devices if d.platform == 'cuda']
     cpu_devices = [d for d in devices if d.device_kind == 'cpu']
     
     print(f"🖥️  Total devices: {len(devices)}")
