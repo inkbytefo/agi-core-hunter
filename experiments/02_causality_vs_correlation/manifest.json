@@ -1,0 +1,160 @@
+{
+  "experiment": {
+    "name": "Causality vs Correlation",
+    "version": "1.0",
+    "date": "2025-08-27",
+    "description": "Test whether agents that learn causal relationships adapt better to interventions than those using only correlational learning",
+    "hypothesis": "Agents with stronger causal reasoning (higher causal_strength) will show better adaptation to environmental interventions and causal transfer learning"
+  },
+  "environment": {
+    "type": "CausalGridWorld",
+    "config": {
+      "height": 8,
+      "width": 8,
+      "obstacle_prob": 0.2,
+      "max_steps": 50,
+      "reward_goal": 10.0,
+      "reward_step": -0.1,
+      "reward_obstacle": -1.0,
+      "enable_interventions": true,
+      "intervention_probability": 0.15
+    }
+  },
+  "agents": [
+    {
+      "name": "Causal_Weak",
+      "type": "CausalAgent",
+      "config": {
+        "causal_dim": 6,
+        "causal_strength": 0.1,
+        "learning_rate": 3e-4
+      }
+    },
+    {
+      "name": "Causal_Medium", 
+      "type": "CausalAgent",
+      "config": {
+        "causal_dim": 6,
+        "causal_strength": 1.0,
+        "learning_rate": 3e-4
+      }
+    },
+    {
+      "name": "Causal_Strong",
+      "type": "CausalAgent", 
+      "config": {
+        "causal_dim": 6,
+        "causal_strength": 5.0,
+        "learning_rate": 3e-4
+      }
+    },
+    {
+      "name": "MDL_Baseline",
+      "type": "MDLAgent",
+      "config": {
+        "latent_dim": 6,
+        "beta": 1.0,
+        "learning_rate": 3e-4
+      }
+    }
+  ],
+  "training": {
+    "total_episodes": 8000,
+    "eval_frequency": 500,
+    "batch_size": 32,
+    "buffer_size": 15000,
+    "warmup_episodes": 1000
+  },
+  "evaluation": {
+    "intervention_tests": [
+      {
+        "name": "strong_wind_intervention",
+        "type": "strong_wind",
+        "episodes": 150,
+        "description": "Test adaptation to forced high wind conditions"
+      },
+      {
+        "name": "low_visibility_intervention", 
+        "type": "low_visibility",
+        "episodes": 150,
+        "description": "Test adaptation to forced poor visibility"
+      },
+      {
+        "name": "unstable_goal_intervention",
+        "type": "unstable_goal",
+        "episodes": 150,
+        "description": "Test adaptation to unstable goal positions"
+      },
+      {
+        "name": "multiple_interventions",
+        "type": "multiple_interventions",
+        "episodes": 200,
+        "description": "Test adaptation to simultaneous interventions"
+      }
+    ],
+    "ood_tests": [
+      {
+        "name": "high_obstacles",
+        "type": "obstacles",
+        "episodes": 100,
+        "description": "Standard OOD test with more obstacles"
+      },
+      {
+        "name": "larger_grid",
+        "type": "size",
+        "episodes": 100,
+        "description": "Standard OOD test with larger grid"
+      }
+    ],
+    "causal_transfer_tests": [
+      {
+        "name": "wind_to_visibility_transfer",
+        "description": "Test if learning wind effects transfers to visibility adaptation",
+        "source_intervention": "strong_wind",
+        "target_intervention": "low_visibility",
+        "episodes": 100
+      },
+      {
+        "name": "single_to_multiple_transfer",
+        "description": "Test if learning single interventions helps with multiple interventions",
+        "source_intervention": "strong_wind",
+        "target_intervention": "multiple_interventions", 
+        "episodes": 100
+      }
+    ],
+    "metrics": [
+      "success_rate",
+      "average_steps",
+      "intervention_adaptation_rate",
+      "causal_transfer_efficiency",
+      "causal_graph_accuracy",
+      "intervention_prediction_error",
+      "sample_efficiency_under_intervention"
+    ]
+  },
+  "logging": {
+    "wandb_project": "agi_core_hunter",
+    "wandb_tags": ["causality", "intervention", "causal_transfer", "grid_world"],
+    "log_frequency": 100,
+    "save_causal_graphs": true,
+    "save_intervention_responses": true
+  },
+  "analysis": {
+    "causal_discovery_evaluation": {
+      "ground_truth_relationships": [
+        {"from": "wind_strength", "to": "movement_success", "strength": 0.8},
+        {"from": "visibility", "to": "observation_quality", "strength": 0.9},
+        {"from": "goal_stability", "to": "goal_position", "strength": 0.85}
+      ]
+    },
+    "intervention_effectiveness": {
+      "baseline_performance": "performance without interventions",
+      "adaptation_speed": "episodes needed to adapt to intervention",
+      "final_performance": "performance after adaptation"
+    },
+    "causal_transfer": {
+      "zero_shot_transfer": "performance on new intervention without training",
+      "few_shot_transfer": "performance after minimal training on new intervention"
+    }
+  }
+}

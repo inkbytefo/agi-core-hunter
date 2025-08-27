@@ -1,0 +1,118 @@
+{
+  "experiment": {
+    "name": "FEP vs Exploration",
+    "version": "1.0",
+    "date": "2025-08-27",
+    "description": "Test whether Free Energy Principle agents show better active inference, exploration efficiency, and adaptation to uncertain environments",
+    "hypothesis": "Agents with stronger Free Energy Principle implementation (higher epistemic_weight) will show better exploration efficiency, faster adaptation to uncertainty, and more robust performance in dynamic environments"
+  },
+  "environment": {
+    "type": "ActiveInferenceWorld",
+    "config": {
+      "height": 10,
+      "width": 10,
+      "uncertainty_prob": 0.3,
+      "hidden_reward_prob": 0.1,
+      "observation_noise_std": 0.2,
+      "max_steps": 200,
+      "reward_goal": 20.0,
+      "reward_hidden": 5.0,
+      "reward_step": -0.1,
+      "reward_exploration": 1.0,
+      "surprise_threshold": 2.0,
+      "goal_move_prob": 0.02,
+      "fep_strength": 1.0
+    }
+  },
+  "agents": [
+    {
+      "name": "FEP_Low",
+      "type": "FEPAgent",
+      "config": {
+        "hidden_dim": 16,
+        "precision": 0.5,
+        "epistemic_weight": 0.1,
+        "learning_rate": 3e-4
+      }
+    },
+    {
+      "name": "FEP_Medium",
+      "type": "FEPAgent",
+      "config": {
+        "hidden_dim": 16,
+        "precision": 1.0,
+        "epistemic_weight": 1.0,
+        "learning_rate": 3e-4
+      }
+    },
+    {
+      "name": "FEP_High",
+      "type": "FEPAgent",
+      "config": {
+        "hidden_dim": 16,
+        "precision": 2.0,
+        "epistemic_weight": 3.0,
+        "learning_rate": 3e-4
+      }
+    },
+    {
+      "name": "MDL_Baseline",
+      "type": "MDLAgent",
+      "config": {
+        "latent_dim": 16,
+        "beta": 1.0,
+        "learning_rate": 3e-4
+      }
+    }
+  ],
+  "training": {
+    "total_episodes": 8000,
+    "eval_frequency": 800,
+    "batch_size": 32,
+    "buffer_size": 15000
+  },
+  "evaluation": {
+    "fep_tests": [
+      {
+        "name": "high_uncertainty",
+        "type": "uncertainty",
+        "episodes": 150,
+        "description": "Test performance in high uncertainty environment"
+      },
+      {
+        "name": "exploration_challenge",
+        "type": "exploration", 
+        "episodes": 150,
+        "description": "Test exploration efficiency and information gathering"
+      },
+      {
+        "name": "surprise_adaptation",
+        "type": "surprise",
+        "episodes": 150,
+        "description": "Test adaptation to surprising environmental changes"
+      },
+      {
+        "name": "dynamic_goals",
+        "type": "adaptation",
+        "episodes": 150,
+        "description": "Test adaptation to moving goals and dynamic environment"
+      }
+    ],
+    "metrics": [
+      "success_rate",
+      "exploration_efficiency", 
+      "surprise_minimization",
+      "adaptation_speed",
+      "variational_free_energy",
+      "epistemic_value",
+      "pragmatic_value",
+      "information_gain",
+      "uncertainty_reduction"
+    ]
+  },
+  "logging": {
+    "wandb_project": "agi_core_hunter",
+    "wandb_tags": ["fep", "active_inference", "exploration", "surprise_minimization"],
+    "log_frequency": 100
+  }
+}
