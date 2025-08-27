@@ -18,8 +18,8 @@ def test_jax_gpu():
     
     # 1. Device Detection
     devices = jax.devices()
-    gpu_devices = [d for d in devices if d.device_kind == 'gpu']
-    cpu_devices = [d for d in devices if d.device_kind == 'cpu']
+    gpu_devices = [d for d in devices if d.platform == 'cuda']
+    cpu_devices = [d for d in devices if d.platform == 'cpu']
     
     print(f"🖥️  Total JAX devices: {len(devices)}")
     print(f"⚡ GPU devices: {len(gpu_devices)}")
